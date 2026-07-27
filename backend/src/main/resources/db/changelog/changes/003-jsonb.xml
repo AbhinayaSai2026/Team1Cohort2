@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ============================================================================
+ TICKET-ADV009 — JSONB Metadata Column on Instruments (+ GIN index)
+ WHAT:    Adds metadata JSONB column to instruments table with GIN jsonb_path_ops index.
+ HOW:     PostgreSQL-gated changeset with dbms="postgresql" precondition.
+ WHY:     Dynamic instrument metadata (sector, issuer, rating) without DDL schema migrations.
+ OBSERVE: EXPLAIN ANALYZE on metadata @> '{"sector":"Technology"}' uses GIN index.
+ ============================================================================
+-->
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="003-jsonb-on-instruments" author="team">
+        <preConditions onFail="MARK_RAN">
+            <dbms type="postgresql"/>
+            <not><columnExists tableName="instruments" columnName="metadata"/></not>
+        </preConditions>
+
+        <sql>ALTER TABLE instruments ADD COLUMN metadata JSONB NOT NULL DEFAULT '{}'::JSONB;</sql>
+        <sql>CREATE INDEX idx_instruments_metadata_gin ON instruments USING GIN (metadata jsonb_path_ops);</sql>
+
+        <rollback>
+            <sql>DROP INDEX IF EXISTS idx_instruments_metadata_gin;</sql>
+            <sql>ALTER TABLE instruments DROP COLUMN IF EXISTS metadata;</sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ============================================================================
+ TICKET-ADV006 — Core 8-Entity Schema (Part 3: users)
+ ============================================================================
+-->
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="007-create-users" author="team">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="users"/></not>
+        </preConditions>
+        <createTable tableName="users">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="email" type="VARCHAR(100)"><constraints nullable="false" unique="true"/></column>
+            <column name="password_hash" type="VARCHAR(255)"><constraints nullable="false"/></column>
+            <column name="role" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+        <rollback>
+            <dropTable tableName="users"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Add FK from recon_jobs.triggered_by_user_id to users.id -->
+    <changeSet id="007-fk-recon-jobs-users" author="team">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="recon_jobs"/>
+            <tableExists tableName="users"/>
+        </preConditions>
+        <addForeignKeyConstraint baseTableName="recon_jobs" baseColumnNames="triggered_by_user_id"
+                                 constraintName="fk_recon_jobs_user"
+                                 referencedTableName="users" referencedColumnNames="id"/>
+        <rollback>
+            <dropForeignKeyConstraint baseTableName="recon_jobs" constraintName="fk_recon_jobs_user"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

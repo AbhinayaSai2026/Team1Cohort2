@@ -1,0 +1,6 @@
+id,symbol,name,asset_class,currency,isin
+1,SAP.DE,SAP SE,EQUITY,EUR,DE0007164600
+2,US10Y,US 10-Year Treasury,FIXED_INCOME,USD,US912828F622
+3,EURUSD,Euro / US Dollar,FX,USD,
+4,XAU,Spot Gold,COMMODITY,USD,
+5,CL_FUT,WTI Crude Oil Futures,DERIVATIVE,USD,

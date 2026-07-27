@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ============================================================================
+ TICKET-ADV008 — Materialised View: mv_daily_recon_summary
+ WHAT:    Aggregates trades and breaks by trade_date, region, asset_class.
+ HOW:     Requires UNIQUE INDEX so REFRESH MATERIALIZED VIEW CONCURRENTLY works.
+ WHY:     Eliminates 600ms+ full-table scans for daily dashboard summary cards.
+ ============================================================================
+-->
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="005-mv-daily-recon-summary" author="team">
+        <preConditions onFail="MARK_RAN">
+            <dbms type="postgresql"/>
+            <not><tableExists tableName="mv_daily_recon_summary"/></not>
+        </preConditions>
+        <sql splitStatements="false"><![CDATA[
+            CREATE MATERIALIZED VIEW mv_daily_recon_summary AS
+            SELECT
+                t.trade_date,
+                cp.region,
+                i.asset_class,
+                COUNT(*)                                                       AS total_trades,
+                COUNT(*) FILTER (WHERE t.status = 'MATCHED')                   AS matched_trades,
+                COUNT(*) FILTER (WHERE t.status IN ('UNMATCHED','DISPUTED'))    AS break_trades,
+                COALESCE(SUM(t.quantity * t.price), 0)                         AS total_notional
+            FROM trades t
+            JOIN counterparties cp ON cp.id = t.counterparty_id
+            JOIN instruments i ON i.id = t.instrument_id
+            WHERE t.deleted_at IS NULL
+            GROUP BY t.trade_date, cp.region, i.asset_class;
+
+            -- UNIQUE INDEX required for REFRESH MATERIALIZED VIEW CONCURRENTLY
+            CREATE UNIQUE INDEX uq_mv_daily_recon_summary
+                ON mv_daily_recon_summary (trade_date, region, asset_class);
+        ]]></sql>
+        <rollback>
+            <sql>DROP MATERIALIZED VIEW IF EXISTS mv_daily_recon_summary;</sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
