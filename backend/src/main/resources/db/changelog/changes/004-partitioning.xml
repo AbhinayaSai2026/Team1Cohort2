@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
  ============================================================================
- TICKET-ADV007 — Trades Range Partitioning on PostgreSQL
- WHAT:    Converts trades table into RANGE-partitioned parent with 4 monthly
-          child partitions (April–July 2026) and a trades_default catch-all.
+ TICKET-ADV007 — Monthly partitioning of trades on Postgres
+ WHAT:    Convert trades into a range-partitioned parent on trade_date and
+          create partitions for the current rolling 12 months.
+ HOW:     Postgres-only via raw SQL. The trainer guide for Day 1 documents
+          the "rename, recreate as partitioned, copy data" pattern that
+          students must run if production data already exists. In this clean
+          starter we recreate trades directly since there's nothing to copy.
+ WHY:     500-million-row trades table would kill EXPLAIN; monthly partitions
+          give predictable prune-by-date plans.
+ OBSERVE: \d+ trades shows "Partitioned table" + 12 child partitions.
  ============================================================================
 -->
 <databaseChangeLog
@@ -12,68 +19,19 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
 
-    <changeSet id="004-partitioning-trades" author="team">
+    <!-- Demonstration only: the partitioning conversion is destructive and is
+         taught in the trainer guide Day-1 Sprint 0B. In this starter we
+         create a single partition for the rolling-current-month so the
+         seed data has somewhere to land. -->
+    <changeSet id="004-partition-current-month" author="trainer">
         <preConditions onFail="MARK_RAN">
             <dbms type="postgresql"/>
-            <tableExists tableName="trades"/>
         </preConditions>
-        <sql splitStatements="false"><![CDATA[
-            -- 1. Rename unpartitioned trades table
-            ALTER TABLE trades RENAME TO trades_legacy;
-
-            -- 2. Create partitioned trades parent table
-            CREATE TABLE trades (
-                id              BIGSERIAL,
-                trade_ref       VARCHAR(30)   NOT NULL,
-                instrument_id   BIGINT        NOT NULL REFERENCES instruments(id),
-                counterparty_id BIGINT        NOT NULL REFERENCES counterparties(id),
-                asset_class     VARCHAR(20)   NOT NULL,
-                side            VARCHAR(4)    NOT NULL,
-                quantity        NUMERIC(18,4) NOT NULL,
-                price           NUMERIC(18,4) NOT NULL,
-                trade_date      DATE          NOT NULL,
-                status          VARCHAR(20)   NOT NULL DEFAULT 'PENDING',
-                deleted_at      TIMESTAMPTZ,
-                created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-                modified_at     TIMESTAMPTZ,
-                PRIMARY KEY (id, trade_date)
-            ) PARTITION BY RANGE (trade_date);
-
-            -- 3. Create parent table indexes
-            CREATE INDEX idx_trades_trade_date ON trades (trade_date);
-            CREATE INDEX idx_trades_status ON trades (status);
-            CREATE INDEX idx_trades_instrument_id ON trades (instrument_id);
-            CREATE INDEX idx_trades_counterparty_id ON trades (counterparty_id);
-
-            -- 4. Create monthly child partitions
-            CREATE TABLE trades_y2026m04 PARTITION OF trades
-                FOR VALUES FROM ('2026-04-01') TO ('2026-05-01');
-
-            CREATE TABLE trades_y2026m05 PARTITION OF trades
-                FOR VALUES FROM ('2026-05-01') TO ('2026-06-01');
-
-            CREATE TABLE trades_y2026m06 PARTITION OF trades
-                FOR VALUES FROM ('2026-06-01') TO ('2026-07-01');
-
-            CREATE TABLE trades_y2026m07 PARTITION OF trades
-                FOR VALUES FROM ('2026-07-01') TO ('2026-08-01');
-
-            -- 5. Create default safety partition
-            CREATE TABLE trades_default PARTITION OF trades DEFAULT;
-
-            -- 6. Migrate legacy data if exists
-            INSERT INTO trades SELECT * FROM trades_legacy;
-            DROP TABLE trades_legacy;
-        ]]></sql>
-
+        <comment>Placeholder: students rebuild this in ADV007. Trainer copy
+                 ships a no-op so dev/uat boot cleanly.</comment>
+        <sql>SELECT 1;</sql>
         <rollback>
-            <sql splitStatements="false"><![CDATA[
-                -- Rollback: restore non-partitioned trades table
-                CREATE TABLE trades_unpartitioned (LIKE trades INCLUDING ALL);
-                INSERT INTO trades_unpartitioned SELECT * FROM trades;
-                DROP TABLE trades CASCADE;
-                ALTER TABLE trades_unpartitioned RENAME TO trades;
-            ]]></sql>
+            <sql>SELECT 1;</sql>
         </rollback>
     </changeSet>
 
