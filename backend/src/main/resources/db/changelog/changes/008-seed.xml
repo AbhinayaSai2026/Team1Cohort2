@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ============================================================================
+ TICKET-ADV017 — Seed Data Changelog Chapter
+ WHAT:    Loads counterparties, instruments, 500 trades, breaks, and 4 users.
+ HOW:     Gated with context="dev,test" and preconditions so it never runs in prod.
+ ============================================================================
+-->
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- 1. Load Counterparties CSV -->
+    <changeSet id="008-seed-counterparties" author="team" context="dev,test">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM counterparties</sqlCheck>
+        </preConditions>
+        <loadData file="data/counterparties.csv" tableName="counterparties"
+                  separator="," relativeToChangelogFile="true">
+            <column name="id" type="NUMERIC"/>
+            <column name="name" type="STRING"/>
+            <column name="lei_code" type="STRING"/>
+            <column name="region" type="STRING"/>
+        </loadData>
+        <rollback>
+            <sql>DELETE FROM counterparties;</sql>
+        </rollback>
+    </changeSet>
+
+    <!-- 2. Load Base Instruments CSV -->
+    <changeSet id="008-seed-instruments-base" author="team" context="dev,test">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM instruments</sqlCheck>
+        </preConditions>
+        <loadData file="data/instruments.csv" tableName="instruments"
+                  separator="," relativeToChangelogFile="true">
+            <column name="id" type="NUMERIC"/>
+            <column name="symbol" type="STRING"/>
+            <column name="name" type="STRING"/>
+            <column name="asset_class" type="STRING"/>
+            <column name="currency" type="STRING"/>
+            <column name="isin" type="STRING"/>
+        </loadData>
+        <rollback>
+            <sql>DELETE FROM instruments;</sql>
+        </rollback>
+    </changeSet>
+
+    <!-- 3. Generate Remaining 45 Instruments & 500 Partitioned Trades + Breaks -->
+    <changeSet id="008-seed-generated-trades-and-breaks" author="team" context="dev,test">
+        <preConditions onFail="MARK_RAN">
+            <dbms type="postgresql"/>
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM trades</sqlCheck>
+        </preConditions>
+        <sql splitStatements="false"><![CDATA[
+            -- Generate 45 instruments
+            INSERT INTO instruments (id, symbol, name, asset_class, currency, isin, metadata)
+            SELECT
+                g + 5                                                       AS id,
+                'GEN' || LPAD(g::TEXT, 4, '0')                             AS symbol,
+                'Generated Instrument ' || g                                AS name,
+                (ARRAY['EQUITY','FIXED_INCOME','FX','COMMODITY','DERIVATIVE'])[1 + (g % 5)]
+                                                                            AS asset_class,
+                (ARRAY['USD','EUR','GBP','JPY','CHF'])[1 + (g % 5)]         AS currency,
+                'GEN' || LPAD(g::TEXT, 9, '0')                              AS isin,
+                jsonb_build_object('seq', g, 'auto', true, 'sector', (ARRAY['Technology','Banking','Energy','Healthcare','Industrial'])[1 + (g % 5)])
+                                                                            AS metadata
+            FROM generate_series(1, 45) AS g
+            ON CONFLICT (id) DO NOTHING;
+
+            -- Generate 500 trades evenly spread across April–July 2026 (~125/month)
+            INSERT INTO trades (id, trade_ref, instrument_id, counterparty_id, asset_class, side, quantity, price, trade_date, status)
+            SELECT
+                n                                                           AS id,
+                'TRD-2026-' || LPAD(n::TEXT, 6, '0')                        AS trade_ref,
+                1 + (n % 50)                                                 AS instrument_id,
+                1 + (n % 10)                                                 AS counterparty_id,
+                (ARRAY['EQUITY','FIXED_INCOME','FX','COMMODITY','DERIVATIVE'])[1 + (n % 5)]
+                                                                            AS asset_class,
+                (ARRAY['BUY','SELL'])[1 + (n % 2)]                           AS side,
+                ROUND((100 + (n * 17) % 5000)::NUMERIC, 4)                  AS quantity,
+                ROUND((10 + (n * 13) % 450)::NUMERIC, 4)                    AS price,
+                DATE '2026-04-01' + (n % 120) * INTERVAL '1 day'             AS trade_date,
+                (ARRAY['PENDING','MATCHED','UNMATCHED','DISPUTED','MATCHED','MATCHED'])[1 + (n % 6)]
+                                                                            AS status
+            FROM generate_series(1, 500) AS n
+            ON CONFLICT (id, trade_date) DO NOTHING;
+
+            -- Generate 30 recon breaks
+            INSERT INTO recon_breaks (id, trade_id, discrepancy_type, status)
+            SELECT
+                ROW_NUMBER() OVER (ORDER BY t.id)                            AS id,
+                t.id                                                        AS trade_id,
+                (ARRAY['PRICE_MISMATCH','QUANTITY_MISMATCH','DATE_MISMATCH'])[1 + (t.id % 3)]
+                                                                            AS discrepancy_type,
+                'OPEN'                                                      AS status
+            FROM trades t
+            WHERE t.status IN ('UNMATCHED','DISPUTED')
+            LIMIT 30
+            ON CONFLICT (id) DO NOTHING;
+        ]]></sql>
+        <rollback>
+            <sql>DELETE FROM recon_breaks; DELETE FROM trades; DELETE FROM instruments WHERE id > 5;</sql>
+        </rollback>
+    </changeSet>
+
+    <!-- 4. Seed Initial BCrypt Users -->
+    <changeSet id="008-seed-users" author="team" context="dev,test">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM users</sqlCheck>
+        </preConditions>
+        <insert tableName="users">
+            <column name="email" value="admin@db.com"/>
+            <column name="password_hash" value="$2y$10$L9iP3BfsBS2LbVJRfc86TuWnJvP.AohjX3PNLwdtjlZfyB7YSp87C"/>
+            <column name="role" value="ADMIN"/>
+        </insert>
+        <insert tableName="users">
+            <column name="email" value="trader@db.com"/>
+            <column name="password_hash" value="$2y$10$LIpkayi0QDWyVguPtEQbkOATM7PTnMKFDNq47K92TUx2LHTBFQf1i"/>
+            <column name="role" value="TRADER"/>
+        </insert>
+        <insert tableName="users">
+            <column name="email" value="viewer@db.com"/>
+            <column name="password_hash" value="$2y$10$gC8J5Tzr15p4V6BgbbEFGOEb4VWM4YUOAdKEeyFlXtEvYolYblCVC"/>
+            <column name="role" value="VIEWER"/>
+        </insert>
+        <insert tableName="users">
+            <column name="email" value="recon@db.com"/>
+            <column name="password_hash" value="$2y$10$UVYhlvPX38zSdPhY6bz4ee453bh6gXp9guhAfV5IU2SjcWPm0eWKq"/>
+            <column name="role" value="RECON_ANALYST"/>
+        </insert>
+        <rollback>
+            <sql>DELETE FROM users;</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="tag-day1-complete" author="team">
+        <tagDatabase tag="day1-complete"/>
+    </changeSet>
+
+</databaseChangeLog>

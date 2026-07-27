@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: reconx
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:reconx_dev}}
+    username: ${POSTGRES_USER:reconx}
+    password: ${POSTGRES_PASSWORD:reconx}
+    driver-class-name: org.postgresql.Driver
+
+  # TICKET-ADV012 — Liquibase classpath wiring (classpath: prefix mandatory to avoid JAR skip)
+  liquibase:
+    change-log: classpath:/db/changelog/db.changelog-master.xml
+    enabled: true
+    drop-first: false
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.format_sql: true
+      hibernate.jdbc.time_zone: UTC
+
+server:
+  port: 8080

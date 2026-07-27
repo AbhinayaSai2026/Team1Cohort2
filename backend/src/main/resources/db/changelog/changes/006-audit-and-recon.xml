@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ============================================================================
+ TICKET-ADV006 — Core 8-Entity Schema (Part 2: recon_jobs, recon_breaks, audit_log)
+ ============================================================================
+-->
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- 1. Recon Jobs Table -->
+    <changeSet id="006-create-recon-jobs" author="team">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="recon_jobs"/></not>
+        </preConditions>
+        <createTable tableName="recon_jobs">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="started_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"><constraints nullable="false"/></column>
+            <column name="completed_at" type="TIMESTAMP"/>
+            <column name="triggered_by_user_id" type="BIGINT"/>
+            <column name="status" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="total_processed" type="INTEGER" defaultValue="0"/>
+            <column name="breaks_found" type="INTEGER" defaultValue="0"/>
+        </createTable>
+        <rollback>
+            <dropTable tableName="recon_jobs"/>
+        </rollback>
+    </changeSet>
+
+    <!-- 2. Recon Breaks Table -->
+    <changeSet id="006-create-recon-breaks" author="team">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="recon_breaks"/></not>
+        </preConditions>
+        <createTable tableName="recon_breaks">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="trade_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="recon_job_id" type="BIGINT"/>
+            <column name="discrepancy_type" type="VARCHAR(50)"><constraints nullable="false"/></column>
+            <column name="status" type="VARCHAR(20)" defaultValue="OPEN"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="resolved_at" type="TIMESTAMP"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="recon_breaks" baseColumnNames="trade_id"
+                                 constraintName="fk_recon_breaks_trade"
+                                 referencedTableName="trades" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="recon_breaks" baseColumnNames="recon_job_id"
+                                 constraintName="fk_recon_breaks_job"
+                                 referencedTableName="recon_jobs" referencedColumnNames="id"/>
+        <rollback>
+            <dropTable tableName="recon_breaks"/>
+        </rollback>
+    </changeSet>
+
+    <!-- 3. Audit Log Table (changed_by actor email deliberately has NO DB FK constraint) -->
+    <changeSet id="006-create-audit-log" author="team">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="audit_log"/></not>
+        </preConditions>
+        <createTable tableName="audit_log">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="entity_name" type="VARCHAR(50)"><constraints nullable="false"/></column>
+            <column name="entity_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="action" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="changed_by" type="VARCHAR(100)"><constraints nullable="false"/></column>
+            <column name="old_value" type="VARCHAR(4000)"/>
+            <column name="new_value" type="VARCHAR(4000)"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+        <rollback>
+            <dropTable tableName="audit_log"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
