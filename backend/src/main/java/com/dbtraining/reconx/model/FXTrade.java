@@ -102,4 +102,8 @@ public final class FXTrade implements TradeType {
             return new FXTrade(this);
         }
     }
+    @Override public boolean equals(Object o) {
+        return (o instanceof FXTrade other) && tradeRef.equals(other.tradeRef);
+    }
+    @Override public int hashCode() { return tradeRef.hashCode(); }
 }
