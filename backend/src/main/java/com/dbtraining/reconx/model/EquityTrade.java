@@ -114,4 +114,10 @@ public final class EquityTrade implements TradeType {
             return new EquityTrade(this);
         }
     }
+    @Override
+    public boolean equals(Object o) {
+        return (o instanceof EquityTrade other) && tradeRef.equals(other.tradeRef);
+    }
+
+    @Override public int hashCode() { return tradeRef.hashCode(); }
 }
