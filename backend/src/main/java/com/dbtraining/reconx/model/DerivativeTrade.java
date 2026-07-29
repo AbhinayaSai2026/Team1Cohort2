@@ -113,8 +113,4 @@ public final class DerivativeTrade implements TradeType {
             return new DerivativeTrade(this);
         }
     }
-    @Override public boolean equals(Object o) {
-        return (o instanceof DerivativeTrade other) && tradeRef.equals(other.tradeRef);
-    }
-    @Override public int hashCode() { return tradeRef.hashCode(); }
 }

@@ -32,7 +32,7 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "trades")
 @EntityListeners(AuditingEntityListener.class)
-// @org.hibernate.envers.Audited                  // re-enable when envers tables are migrated
+@org.hibernate.envers.Audited
 @SQLRestriction("deleted_at IS NULL")
 public class Trade {
 
