@@ -8,6 +8,7 @@ import java.time.Instant;
  */
 @Entity
 @Table(name = "counterparties")
+@org.hibernate.envers.Audited
 public class Counterparty {
 
     @Id

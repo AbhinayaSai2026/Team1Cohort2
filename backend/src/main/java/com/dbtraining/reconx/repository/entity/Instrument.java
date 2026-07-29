@@ -9,6 +9,7 @@ import jakarta.persistence.*;
  */
 @Entity
 @Table(name = "instruments")
+@org.hibernate.envers.Audited
 public class Instrument {
 
     @Id
