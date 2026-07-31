@@ -18,6 +18,14 @@ export default function Login() {
     //   2. on success: call login(token, role) from AuthContext, then
     //      navigate('/').
     //   3. on failure: setError(err.message) so the alert div renders.
+    setError(null);
+    try {
+      const { token, role } = await api.login(email, password);
+      login(token, role);
+      navigate('/');
+    } catch (err) {
+      setError(err.message || 'Login failed');
+    }
   }
 
   return (

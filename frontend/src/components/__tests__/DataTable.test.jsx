@@ -1,4 +1,5 @@
-// TICKET-ADV125 — RTL test against the DataTable compound component.
+
+// RTL test against the DataTable compound component.
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
@@ -14,8 +15,13 @@ describe('<DataTable>', () => {
     );
     // TODO(TICKET-ADV125): write assertion — column labels "Alpha" / "Beta"
     //                     should appear in the document.
+    expect(screen.getByRole('button', { name: 'Alpha' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Beta' })).toBeInTheDocument();
+  
     // TODO(TICKET-ADV125): write assertion — rendered rows "row 1" / "row 2"
     //                     should appear in the document.
+    expect(screen.getByText('row 1')).toBeInTheDocument();
+    expect(screen.getByText('row 2')).toBeInTheDocument();
   });
 
   it('invokes onSortChange when a header is clicked', async () => {
@@ -29,5 +35,6 @@ describe('<DataTable>', () => {
     await userEvent.click(screen.getByText('Alpha'));
     // TODO(TICKET-ADV125): write assertion — onSortChange should have been
     //                     called with the clicked column key ('a').
+    expect(onSortChange).toHaveBeenCalledWith('a');
   });
 });

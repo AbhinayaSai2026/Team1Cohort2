@@ -1,4 +1,4 @@
-// TICKET-ADV111 — Vite config + path aliases (@/components, @/hooks, ...)
+// TICKET-ADV111 —Vite config + path aliases (@/components, @/hooks, ...)
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
@@ -16,9 +16,9 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+   
     proxy: {
-      '/api': { target: 'http://localhost:8080', changeOrigin: true },
+      '/api': { target: 'http://localhost:8081', changeOrigin: true },
     },
   },
   test: {
