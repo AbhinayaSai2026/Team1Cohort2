@@ -1,4 +1,4 @@
-// TICKET-ADV111 — Entry point; mounts <App /> inside ThemeProvider + Router.
+// TICKET-ADV111 — mounts <App /> inside ThemeProvider + Router.
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
