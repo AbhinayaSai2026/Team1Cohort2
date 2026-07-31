@@ -1,6 +1,6 @@
 // TICKET-ADV114 — Compound DataTable.
 // TICKET-ADV117 — useDebouncedSearch.
-import React, { useState } from 'react';
+import React, { useEffect,useState } from 'react';
 import { withAuth } from '@components/withAuth.jsx';
 import DataTable from '@components/DataTable.jsx';
 import { useDebouncedSearch } from '@hooks/useDebouncedSearch.js';
@@ -17,6 +17,29 @@ function Trades() {
   //   - calls api.listTrades(params) and stores the response in `data`
   //   - re-runs whenever `page` or `debounced` changes
   //   - degrades gracefully on error (set empty page).
+  useEffect(() => {
+    let cancelled = false;
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    if (debounced) params.set('status', debounced);
+
+    api.listTrades(params.toString())
+      .then((res) => {
+        if (cancelled) return;
+        if (res && Array.isArray(res.items)) {
+          setData({ items: res.items, totalPages: res.totalPages ?? 0 });
+        } else if (Array.isArray(res)) {
+          setData({ items: res, totalPages: 1 });
+        } else {
+          setData({ items: [], totalPages: 0 });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setData({ items: [], totalPages: 0 });
+      });
+      return () => { cancelled = true; };
+  }, [page, debounced]);
+
 
   return (
     <section>
@@ -37,6 +60,18 @@ function Trades() {
         ]} />
         {/* TODO(TICKET-ADV114): render a DataTable.Body with `rows={data.items}`
             and a `render` prop that returns one <span> per column. */}
+              <DataTable.Body
+          rows={data.items}
+          render={(t) => (
+            <>
+              <span>{t.tradeRef}</span>
+              <span>{t.symbol ?? t.instrument}</span>
+              <span>{t.qty ?? t.quantity}</span>
+              <span>{t.price}</span>
+              <span>{t.status}</span>
+            </>
+          )}
+        />
         <DataTable.Pagination
           page={page}
           totalPages={Math.max(1, data.totalPages)}

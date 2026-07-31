@@ -1,6 +1,6 @@
 // TICKET-ADV112 — withAuth HOC: redirects to /login if no JWT.
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate , useLocation } from 'react-router-dom';
 import { useAuth } from '@context/AuthContext.jsx';
 
 export function withAuth(Component) {

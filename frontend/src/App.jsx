@@ -1,7 +1,7 @@
 // TICKET-ADV122 — Lazy + Suspense for route-based code splitting
 // TICKET-ADV124 — theme toggle wired to ThemeContext.
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Link, Navigate } from 'react-router-dom';
+import { Routes, Route, Link, Navigate ,useNavigate } from 'react-router-dom';
 import { withErrorBoundary } from '@components/withErrorBoundary.jsx';
 import { useAuth } from '@context/AuthContext.jsx';
 import { useTheme } from '@context/ThemeContext.jsx';
