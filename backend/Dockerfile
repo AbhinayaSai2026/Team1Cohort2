@@ -1,3 +1,4 @@
+
 # ============================================================================
 # TICKET-ADV146 — Spring Boot Dockerfile (multi-stage Maven -> JRE 25 slim)
 #
@@ -19,6 +20,6 @@ RUN addgroup -S reconx && adduser -S reconx -G reconx
 USER reconx
 WORKDIR /app
 COPY --from=build /workspace/app.jar app.jar
-EXPOSE 8081
+EXPOSE 8080
 ENV JAVA_OPTS=""
 ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar app.jar"]
