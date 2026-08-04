@@ -1,4 +1,3 @@
-
 # ============================================================================
 # TICKET-ADV146 — Spring Boot Dockerfile (multi-stage Maven -> JRE 25 slim)
 #
